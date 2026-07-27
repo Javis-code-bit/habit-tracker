@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#FF7B42">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="自律打卡">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect rx='22' width='100' height='100' fill='%23FF7B42'/><text x='50' y='68' text-anchor='middle' font-size='50'>📅</text></svg>">
+<title>自律打卡表</title>
+<style>
+  *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+
+  :root{
+    --primary:#FF7B42;--primary-light:#FFB347;--primary-rgb:255,123,66;
+    --bg:#FFF5E6;--bg2:#FFECD2;--header-bg:#FFF3E4;
+    --border:#FFCC70;--border-light:#FFE5A3;--text:#8B6F5E;--text-light:#C9967A;
+    --accent:#F4A460;--accent-text:#E8823A;
+    --checked-gradient:linear-gradient(135deg,#FF9A56,#FF7B42);
+    --checked-shadow:rgba(255,123,66,.4);
+    --table-header-text:#E8823A;--weekend-bg:#FFF9F0;--alt-bg:#FFFDF9;
+    --footer-bg:linear-gradient(135deg,#FFFBF5 0%,#FFF3E4 100%);
+    --container-bg:#FFFFFF;
+    --badge-s:linear-gradient(135deg,#FFD700,#FFA500);
+    --badge-a:linear-gradient(135deg,#FF8C69,#FF6347);
+    --badge-b:linear-gradient(135deg,#FFB347,#FF8C00);
+    --badge-c:linear-gradient(135deg,#87CEEB,#5DADE2);
+    --badge-d:linear-gradient(135deg,#B8B8B8,#909090);
+    --float-emoji:☀️;--float-emoji2:🌻;--float-emoji3:🌸;--float-emoji4:✨;--float-emoji5:💛;
+  }
+  :root.theme-sept{
+    --primary:#00BCD4;--primary-light:#26C6DA;--primary-rgb:0,188,212;
+    --bg:#E0F7FA;--bg2:#B2EBF2;--header-bg:#E0F7FA;
+    --border:#80DEEA;--border-light:#B2EBF2;--text:#5D7B82;--text-light:#80CBC4;
+    --accent:#00ACC1;--accent-text:#00838F;
+    --checked-gradient:linear-gradient(135deg,#00BCD4,#26C6DA);
+    --checked-shadow:rgba(0,188,212,.4);
+    --table-header-text:#00838F;--weekend-bg:#F0FAFC;--alt-bg:#FAFDFE;
+    --footer-bg:linear-gradient(135deg,#F5FDFF 0%,#E0F7FA 100%);
+    --container-bg:#FFFFFF;
+    --badge-s:linear-gradient(135deg,#00E5FF,#00BCD4);
+    --badge-a:linear-gradient(135deg,#26C6DA,#0097A7);
+    --badge-b:linear-gradient(135deg,#4DD0E1,#00838F);
+    --badge-c:linear-gradient(135deg,#80DEEA,#4DD0E1);
+    --badge-d:linear-gradient(135deg,#B2EBF2,#80DEEA);
+    --float-emoji:🍉;--float-emoji2:🧊;--float-emoji3:💧;--float-emoji4:❄️;--float-emoji5:🫧;
+  }
+
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif;
+    background:var(--bg);
+    min-height:100vh;display:flex;flex-direction:column;align-items:center;
+    padding:12px 12px 40px;
+    -webkit-tap-highlight-color:transparent;
+    user-select:none;-webkit-user-select:none;
+    transition:background .4s;
+    overflow-x:hidden;
+    position:relative;
+  }
+
+  /* === 漂浮装饰 === */
+  .float-layer{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+  .float-item{
+    position:absolute;font-size:40px;opacity:.25;
+    animation:floatAround var(--dur) ease-in-out infinite;
+    animation-delay:var(--delay);
+    left:var(--x);top:var(--y);
+    filter:blur(0px);
+  }
+  @keyframes floatAround{
+    0%,100%{transform:translate(0,0) rotate(0deg) scale(1)}
+    25%{transform:translate(15px,-25px) rotate(8deg) scale(1.1)}
+    50%{transform:translate(-10px,-40px) rotate(-5deg) scale(.95)}
+    75%{transform:translate(-18px,-15px) rotate(3deg) scale(1.05)}
+  }
+  /* 个别加速浮动 */
+  .float-item.fast{animation-duration:3.5s}
+  .float-item.slow{animation-duration:7s}
+
+  /* === 背景渐变呼吸 === */
+  body::before{
+    content:'';position:fixed;inset:0;
+    background:radial-gradient(ellipse at 20% 20%, var(--bg2) 0%, transparent 50%),
+              radial-gradient(ellipse at 80% 80%, var(--bg2) 0%, transparent 50%);
+    opacity:.5;pointer-events:none;z-index:-1;
+    animation:bgBreathe 6s ease-in-out infinite;
+  }
+  @keyframes bgBreathe{
+    0%,100%{opacity:.4}
+    50%{opacity:.65}
+  }
+
+  /* === 主容器 === */
+  .app-header{width:100%;max-width:600px;text-align:center;margin-bottom:4px;position:relative;z-index:1}
+  .app-header h1{font-size:22px;font-weight:900;color:var(--primary);letter-spacing:1px}
+  .app-header .subtitle{font-size:12px;color:var(--text-light);font-weight:500;letter-spacing:2px;margin-bottom:10px}
+
+  /* === Tab === */
+  .month-tabs{display:flex;gap:8px;justify-content:center;margin-bottom:12px;position:relative;z-index:1}
+  .month-tab{
+    font-family:inherit;font-size:15px;font-weight:700;
+    padding:10px 28px;border-radius:28px;
+    border:2px solid var(--border);background:var(--container-bg);
+    color:var(--text);cursor:pointer;transition:all .25s;
+    position:relative;overflow:hidden;
+  }
+  .month-tab.active{
+    background:var(--primary);color:#FFF;border-color:var(--primary);
+    box-shadow:0 4px 20px rgba(var(--primary-rgb),.35);transform:scale(1.03);
+  }
+  .month-tab:active{transform:scale(.95)}
+
+  /* Tab 切换时的小弹跳 */
+  .month-tab.just-switched{animation:tabPop .4s ease}
+
+  /* === 按钮涟漪 === */
+  .ripple{position:relative;overflow:hidden}
+  .ripple::after{
+    content:'';position:absolute;
+    border-radius:50%;
+    background:rgba(255,255,255,.5);
+    width:100px;height:100px;
+    top:var(--ry);left:var(--rx);
+    transform:translate(-50%,-50%) scale(0);
+    animation:rippleOut .6s ease-out forwards;
+    pointer-events:none;
+  }
+  @keyframes rippleOut{to{transform:translate(-50%,-50%) scale(4);opacity:0}}
+
+  /* === 工具栏 === */
+  .toolbar{display:flex;gap:8px;justify-content:center;margin-bottom:12px;flex-wrap:wrap;position:relative;z-index:1}
+  .toolbar button{
+    font-family:inherit;font-size:12px;font-weight:600;
+    padding:6px 14px;border-radius:20px;
+    border:1.5px solid var(--border);cursor:pointer;
+    transition:all .15s;background:var(--container-bg);color:var(--accent-text);
+    position:relative;overflow:hidden;
+  }
+  .toolbar button:active{transform:scale(.95)}
+  .toolbar .btn-fill{background:var(--primary);color:#FFF;border-color:transparent}
+  .toolbar .btn-print{color:var(--accent-text)}
+
+  /* === 表格 === */
+  .table-container{
+    width:100%;max-width:900px;background:var(--container-bg);
+    border-radius:16px;box-shadow:0 2px 16px rgba(var(--primary-rgb),.08);
+    padding:8px 6px;overflow-x:auto;
+    -webkit-overflow-scrolling:touch;transition:background .4s,box-shadow .4s;
+    position:relative;z-index:1;
+  }
+  table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed;min-width:340px}
+  thead th{
+    background:var(--header-bg);padding:6px 1px;font-weight:700;font-size:11px;
+    color:var(--table-header-text);border-bottom:2px solid var(--border);
+    text-align:center;white-space:nowrap;position:sticky;top:0;z-index:2;transition:background .4s;
+  }
+  thead th:first-child{width:5%}
+  thead th:nth-child(2){width:5%}
+  thead th:nth-child(3),thead th:nth-child(4),thead th:nth-child(5),thead th:nth-child(6),thead th:nth-child(7){width:12%}
+  thead th:nth-child(8){width:7%}
+  thead th:last-child{width:9%}
+
+  tbody td{text-align:center;padding:7px 0;border-bottom:1px solid var(--border-light);color:var(--text);font-weight:500;font-size:12px;transition:background .4s}
+  tbody td:first-child{font-weight:700;color:var(--accent);font-size:13px}
+  tbody td:nth-child(2){color:var(--text-light);font-size:10px}
+
+  /* 今日发光 */
+  tbody tr.today td{box-shadow:inset 3px 0 0 var(--primary)}
+  tbody tr.today td:first-child{background:var(--primary);color:#FFF;border-radius:6px 0 0 6px}
+  @keyframes todayPulse{
+    0%,100%{box-shadow:inset 3px 0 0 var(--primary)}
+    50%{box-shadow:inset 3px 0 0 var(--primary),inset 0 0 20px rgba(var(--primary-rgb),.08)}
+  }
+  tbody tr.today{animation:todayPulse 2.5s ease-in-out infinite}
+
+  /* === 打卡格 === */
+  tbody td.cell{position:relative;cursor:pointer;-webkit-tap-highlight-color:transparent}
+  tbody td.cell::after{
+    content:'';display:inline-block;
+    width:22px;height:22px;border:2px solid var(--border);
+    border-radius:6px;background:var(--container-bg);
+    transition:all .15s;vertical-align:middle;
+  }
+  /* 已打卡 */
+  tbody td.cell.checked::after{
+    content:'✓';
+    background:var(--checked-gradient);border-color:var(--primary);
+    color:#FFF;font-size:14px;font-weight:900;
+    line-height:22px;text-align:center;
+    box-shadow:0 0 10px var(--checked-shadow);
+    animation:checkPop .35s cubic-bezier(.18,.89,.32,1.28);
+  }
+  @keyframes checkPop{
+    0%{transform:scale(0)}
+    60%{transform:scale(1.25)}
+    100%{transform:scale(1)}
+  }
+  /* 取消打卡 */
+  tbody td.cell:not(.checked)::after{animation:checkOut .15s ease}
+  @keyframes checkOut{0%{transform:scale(0)}100%{transform:scale(1)}}
+
+  tbody tr.weekend td{background:var(--weekend-bg)}
+  tbody tr.weekend td:first-child{color:var(--primary)}
+  tbody tr:nth-child(even):not(.weekend) td{background:var(--alt-bg)}
+  tbody td.cnt,tbody td.rate{font-weight:700;font-size:13px;transition:all .2s}
+
+  /* 评级达成动画 */
+  tbody td.rate.s-rank{animation:rateCelebrate .6s ease}
+  @keyframes rateCelebrate{
+    0%{transform:scale(1)}
+    30%{transform:scale(1.4);color:var(--primary)}
+    100%{transform:scale(1)}
+  }
+
+  /* === 底部 === */
+  .footer{
+    width:100%;max-width:900px;margin-top:10px;padding:10px 14px;
+    background:var(--footer-bg);border-radius:14px;
+    border:1.5px dashed var(--border);text-align:center;transition:background .4s;
+    position:relative;z-index:1;
+  }
+  .footer .stats{font-size:12px;font-weight:700;color:var(--accent-text);margin-bottom:6px;display:flex;flex-wrap:wrap;justify-content:center;gap:4px}
+  .footer .stats span{padding:2px 8px;background:var(--container-bg);border-radius:14px;border:1px solid var(--border-light);white-space:nowrap;font-size:11px}
+  .footer .stats .sv{color:var(--primary);font-weight:900}
+  .legend{display:flex;justify-content:center;gap:6px;flex-wrap:wrap}
+  .legend-item{display:flex;align-items:center;gap:4px;font-size:10px;font-weight:600;padding:3px 8px;border-radius:14px;background:var(--container-bg);border:1px solid var(--border-light);color:var(--text)}
+  .legend-item .badge{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;font-weight:900;font-size:11px;color:#FFF;flex-shrink:0}
+  .lb-s{background:var(--badge-s)}.lb-a{background:var(--badge-a)}.lb-b{background:var(--badge-b)}.lb-c{background:var(--badge-c)}.lb-d{background:var(--badge-d)}
+
+  /* === 彩带/纸花 === */
+  .confetti-container{position:fixed;inset:0;pointer-events:none;z-index:200}
+  .confetti-piece{
+    position:absolute;width:10px;height:10px;border-radius:3px;
+    animation:confettiFall var(--fall-dur) ease-in forwards;
+    animation-delay:var(--fall-delay);
+    left:var(--cx);top:-20px;
+  }
+  @keyframes confettiFall{
+    0%{transform:translateY(0) rotate(0deg) scale(1);opacity:1}
+    80%{opacity:1}
+    100%{transform:translateY(105vh) rotate(var(--rot)) scale(.3);opacity:0}
+  }
+
+  /* === Toast === */
+  .toast{
+    position:fixed;bottom:30px;left:50%;transform:translateX(-50%);
+    background:#333;color:#FFF;padding:8px 20px;border-radius:20px;
+    font-size:13px;font-weight:600;opacity:0;visibility:hidden;
+    transition:all .3s;z-index:300;pointer-events:none;
+    white-space:nowrap;
+  }
+  .toast.show{opacity:1;visibility:visible;animation:toastBounce .4s ease}
+  @keyframes toastBounce{
+    0%{transform:translateX(-50%) translateY(20px);opacity:0}
+    60%{transform:translateX(-50%) translateY(-6px)}
+    100%{transform:translateX(-50%) translateY(0);opacity:1}
+  }
+
+  /* === 响应式 === */
+  @media(min-width:768px){
+    .table-container{max-width:1000px;padding:10px 8px}
+    table{font-size:12px}
+    tbody td.cell::after{width:18px;height:18px}
+    tbody td.cell.checked::after{line-height:18px;font-size:12px}
+    thead th{font-size:12px;padding:6px 2px}
+    .desktop-split{display:flex;gap:14px}
+    .desktop-split .half{flex:1;min-width:0}
+    .mobile-table{display:none}
+    .float-item{font-size:50px}
+  }
+  @media(max-width:767px){
+    .desktop-table{display:none}
+    .table-container{border-radius:12px;padding:4px 2px}
+    table{font-size:12px;min-width:320px}
+    thead th{font-size:10px;padding:5px 0}
+    tbody td{padding:6px 0;font-size:11px}
+    tbody td.cell::after{width:24px;height:24px}
+    tbody td.cell.checked::after{line-height:24px;font-size:15px}
+    .toolbar button{font-size:11px;padding:5px 12px}
+    .float-item{font-size:32px}
+  }
+
+  @media print{
+    body{background:#FFF;padding:0}
+    .float-layer,.app-header,.month-tabs,.toolbar,.toast,.legend,.confetti-container{display:none!important}
+    .table-container{box-shadow:none;border-radius:0;padding:0;overflow:visible}
+    .footer{border:none;border-radius:0;background:#FFF}
+    .desktop-table{display:block}.mobile-table{display:none}
+    tbody td.cell{cursor:default}
+    tbody td.cell::after,tbody td.cell.checked::after{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    tbody tr.today td{box-shadow:none}
+    tbody tr.today td:first-child{background:transparent;color:inherit}
+    tbody tr.today{animation:none}
+    @page{size:A4 landscape;margin:6mm}
+  }
+</style>
+</head>
+<body>
+
+<!-- 漂浮装饰层 -->
+<div class="float-layer" id="floatLayer"></div>
+<!-- 彩带容器 -->
+<div class="confetti-container" id="confettiContainer"></div>
+
+<div class="app-header">
+  <h1><span id="decoIcon">☀️</span> 自律打卡表 <span id="decoIcon2">🌻</span></h1>
+  <div class="subtitle" id="subtitleText">✦ 每天进步一点点 ✦</div>
+</div>
+
+<div class="month-tabs">
+  <button class="month-tab active ripple" data-month="8" onclick="switchMonth(8)">🌻 8月</button>
+  <button class="month-tab ripple" data-month="9" onclick="switchMonth(9)">🍉 9月</button>
+</div>
+
+<div class="toolbar">
+  <button class="btn-fill ripple" onclick="fillToday()">📍 今天全勤</button>
+  <button class="btn-fill ripple" style="opacity:.8" onclick="fillAll()">🏆 整月全勤</button>
+  <button class="ripple" onclick="resetMonth()">🔄 重置本月</button>
+  <button class="btn-print ripple" onclick="window.print()">🖨️ 打印</button>
+</div>
+
+<div class="table-container" id="tableContainer"></div>
+
+<div class="footer">
+  <div class="stats" id="statsRow">
+    📊 统计：
+    <span>🏆 S <b class="sv" id="sS">0</b>天</span>
+    <span>⭐ A <b class="sv" id="sA">0</b>天</span>
+    <span>💪 B <b class="sv" id="sB">0</b>天</span>
+    <span>📈 C <b class="sv" id="sC">0</b>天</span>
+    <span>🔥 D <b class="sv" id="sD">0</b>天</span>
+  </div>
+  <div class="legend">
+    <div class="legend-item"><span class="badge lb-s">S</span>5项全勤 🏆</div>
+    <div class="legend-item"><span class="badge lb-a">A</span>完成4项 ⭐</div>
+    <div class="legend-item"><span class="badge lb-b">B</span>完成3项 💪</div>
+    <div class="legend-item"><span class="badge lb-c">C</span>完成2项 📈</div>
+    <div class="legend-item"><span class="badge lb-d">D</span>完成1项 🔥</div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ========== 数据 ==========
+const HABIT_ICONS = ['🏃','📖','📊','💆','📚'];
+const RATING = {5:'S',4:'A',3:'B',2:'C',1:'D',0:'-'};
+const MONTH_DATA = {
+  8:{year:2026,month:8,days:30,startDow:6},
+  9:{year:2026,month:9,days:30,startDow:2},
+};
+const DOW = ['日','一','二','三','四','五','六'];
+const THEME_EMOJI = {
+  8:['☀️','🌻','🌸','✨','💛','🌟','🌼','🧡','🍊','⭐'],
+  9:['🍉','🧊','💧','❄️','🫧','🌊','🍧','💦','💎','🩵'],
+};
+const CONFETTI_8 = ['#FF7B42','#FFB347','#FFCC70','#FFD700','#FF6347','#FF9A56','#FFE5A3','#FF8C69'];
+const CONFETTI_9 = ['#00BCD4','#26C6DA','#4DD0E1','#80DEEA','#B2EBF2','#00E5FF','#0097A7','#7EC8E3'];
+
+let currentMonth = 8;
+
+// ========== 漂浮装饰 ==========
+function spawnFloaters() {
+  const layer = document.getElementById('floatLayer');
+  layer.innerHTML = '';
+  const emojis = THEME_EMOJI[currentMonth];
+  for (let i = 0; i < 8; i++) {
+    const el = document.createElement('div');
+    el.className = 'float-item' + (i % 3 === 0 ? ' fast' : i % 3 === 1 ? '' : ' slow');
+    el.style.cssText = `
+      --x:${Math.random()*85}%;--y:${5+Math.random()*80}%;
+      --dur:${4+Math.random()*5}s;--delay:${Math.random()*3}s;
+      font-size:${28+Math.random()*44}px;
+    `;
+    el.textContent = emojis[i % emojis.length];
+    layer.appendChild(el);
+  }
+}
+
+// ========== 彩带特效 ==========
+function spawnConfetti() {
+  const container = document.getElementById('confettiContainer');
+  const colors = currentMonth === 9 ? CONFETTI_9 : CONFETTI_8;
+  const cx = 30 + Math.random() * 40; // 中间区域
+  const fragment = document.createDocumentFragment();
+  for (let i = 0; i < 50; i++) {
+    const piece = document.createElement('div');
+    piece.className = 'confetti-piece';
+    piece.style.cssText = `
+      --cx:${cx + (Math.random()-0.5)*20}%;
+      --fall-dur:${1.5+Math.random()*2}s;
+      --fall-delay:${Math.random()*0.4}s;
+      --rot:${(Math.random()-0.5)*720}deg;
+      background:${colors[Math.floor(Math.random()*colors.length)]};
+      width:${6+Math.random()*10}px;height:${6+Math.random()*10}px;
+      border-radius:${Math.random()>.5?'50%':'3px'};
+    `;
+    fragment.appendChild(piece);
+  }
+  container.appendChild(fragment);
+  setTimeout(() => {
+    while (container.firstChild) container.removeChild(container.firstChild);
+  }, 3000);
+}
+
+// ========== 涟漪 ==========
+document.addEventListener('click', function(e) {
+  const btn = e.target.closest('.ripple');
+  if (!btn || btn.classList.contains('cell')) return;
+  const rect = btn.getBoundingClientRect();
+  btn.style.setProperty('--rx', (e.clientX - rect.left) + 'px');
+  btn.style.setProperty('--ry', (e.clientY - rect.top) + 'px');
+  btn.classList.remove('ripple');
+  void btn.offsetWidth;
+  btn.classList.add('ripple');
+});
+
+// ========== 渲染表格 ==========
+function renderTable(month) {
+  const data = MONTH_DATA[month];
+  const container = document.getElementById('tableContainer');
+  const today = new Date();
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+  const isDesktop = window.innerWidth >= 768;
+
+  let html = '';
+  if (isDesktop) {
+    html += '<div class="desktop-split">';
+    html += buildHalf(data,1,15,todayStr);
+    html += buildHalf(data,16,30,todayStr);
+    html += '</div><div class="mobile-table" style="display:none">'+buildFull(data,todayStr)+'</div>';
+  } else {
+    html += '<div class="desktop-table" style="display:none"></div><div class="mobile-table">'+buildFull(data,todayStr)+'</div>';
+  }
+  container.innerHTML = html;
+  bindClicks();
+  refreshAll();
+  spawnFloaters();
+}
+
+function buildHalf(data,from,to,todayStr){
+  let h='<div class="half"><table><thead><tr><th>日</th><th>周</th>';
+  HABIT_ICONS.forEach(i=>h+=`<th>${i}</th>`);
+  h+='<th>✓</th><th>级</th></tr></thead><tbody>';
+  for(let d=from;d<=to;d++){
+    const dow=(data.startDow+d-1)%7;
+    const isWeekend=dow===0||dow===6;
+    const ds=`${data.year}-${String(data.month).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const isToday=ds===todayStr;
+    h+=`<tr class="${isWeekend?'weekend':''} ${isToday?'today':''}" data-day="${d}">`;
+    h+=`<td>${d}</td><td>${DOW[dow]}</td>`;
+    for(let hi=0;hi<5;hi++)h+=`<td class="cell" data-day="${d}" data-habit="${hi}"></td>`;
+    h+=`<td class="cnt" data-day="${d}">0</td><td class="rate" data-day="${d}">-</td></tr>`;
+  }
+  return h+'</tbody></table></div>';
+}
+
+function buildFull(data,todayStr){
+  let h='<table><thead><tr><th>日</th><th>周</th>';
+  HABIT_ICONS.forEach(i=>h+=`<th>${i}</th>`);
+  h+='<th>✓</th><th>级</th></tr></thead><tbody>';
+  for(let d=1;d<=30;d++){
+    const dow=(data.startDow+d-1)%7;
+    const isWeekend=dow===0||dow===6;
+    const ds=`${data.year}-${String(data.month).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const isToday=ds===todayStr;
+    h+=`<tr class="${isWeekend?'weekend':''} ${isToday?'today':''}" data-day="${d}">`;
+    h+=`<td>${d}</td><td>${DOW[dow]}</td>`;
+    for(let hi=0;hi<5;hi++)h+=`<td class="cell" data-day="${d}" data-habit="${hi}"></td>`;
+    h+=`<td class="cnt" data-day="${d}">0</td><td class="rate" data-day="${d}">-</td></tr>`;
+  }
+  return h+'</tbody></table>';
+}
+
+// ========== 交互 ==========
+function bindClicks(){
+  document.querySelectorAll('.cell').forEach(cell=>{
+    cell.addEventListener('click',()=>{
+      cell.classList.toggle('checked');
+      const day = cell.dataset.day;
+      refreshDay(day);
+      refreshStats();
+      saveState();
+      // 检查是否达成 S
+      const checked = document.querySelectorAll(`.cell[data-day="${day}"].checked`).length;
+      if (checked === 5) {
+        const rateEl = document.querySelector(`.rate[data-day="${day}"]`);
+        if (rateEl) { rateEl.classList.remove('s-rank'); void rateEl.offsetWidth; rateEl.classList.add('s-rank'); }
+        spawnConfetti();
+        toast('🏆 S级！完美的一天！');
+      }
+    });
+  });
+}
+
+function refreshDay(day){
+  const checked = document.querySelectorAll(`.cell[data-day="${day}"].checked`).length;
+  const cntEl = document.querySelector(`.cnt[data-day="${day}"]`);
+  const rateEl = document.querySelector(`.rate[data-day="${day}"]`);
+  if(cntEl){ cntEl.textContent = checked; cntEl.style.transform='scale(1.3)'; setTimeout(()=>cntEl.style.transform='',150); }
+  if(rateEl) rateEl.textContent = RATING[checked];
+}
+
+function refreshAll(){for(let d=1;d<=30;d++)refreshDay(d);refreshStats()}
+
+function refreshStats(){
+  let counts={S:0,A:0,B:0,C:0,D:0};
+  document.querySelectorAll('.rate').forEach(el=>{
+    const r=el.textContent.trim();
+    if(counts.hasOwnProperty(r))counts[r]++;
+  });
+  document.getElementById('sS').textContent=counts.S;
+  document.getElementById('sA').textContent=counts.A;
+  document.getElementById('sB').textContent=counts.B;
+  document.getElementById('sC').textContent=counts.C;
+  document.getElementById('sD').textContent=counts.D;
+}
+
+function fillToday(){
+  const today=new Date();
+  const m=today.getMonth()+1,d=today.getDate();
+  if(m!==currentMonth){toast('当前月份不是本月哦～');return}
+  if(d>30){toast('今天超出范围');return}
+  const wasS = document.querySelectorAll(`.cell[data-day="${d}"].checked`).length === 5;
+  document.querySelectorAll(`.cell[data-day="${d}"]`).forEach(c=>c.classList.add('checked'));
+  refreshDay(d);refreshStats();saveState();
+  if(!wasS){spawnConfetti();toast(`🏆 ${d}号 S级 全勤达成！🎉`)}
+  else toast(`✅ ${d}号 已打卡`);
+}
+
+function fillAll(){
+  document.querySelectorAll('.cell').forEach(c=>c.classList.add('checked'));
+  refreshAll();saveState();spawnConfetti();
+  toast('🏆 整月全勤！太强了！');
+}
+
+function resetMonth(){
+  if(!confirm(`确定清除 ${currentMonth} 月所有打卡记录？`))return;
+  document.querySelectorAll('.cell').forEach(c=>c.classList.remove('checked'));
+  refreshAll();saveState();
+  toast('🔄 已重置');
+}
+
+// ========== 月份切换 ==========
+function switchMonth(month){
+  currentMonth = month;
+  document.querySelectorAll('.month-tab').forEach(t=>{
+    t.classList.toggle('active',+t.dataset.month===month);
+    if(+t.dataset.month===month){t.classList.remove('just-switched');void t.offsetWidth;t.classList.add('just-switched')}
+  });
+  document.documentElement.classList.toggle('theme-sept',month===9);
+  document.querySelector('meta[name="theme-color"]').content = month===9?'#00BCD4':'#FF7B42';
+  document.getElementById('decoIcon').textContent = month===9?'🍉':'☀️';
+  document.getElementById('decoIcon2').textContent = month===9?'🧊':'🌻';
+  document.getElementById('subtitleText').textContent = month===9?'✦ 清凉一夏，自律不停 ✦':'✦ 每天进步一点点 ✦';
+  renderTable(month);loadState();refreshAll();
+}
+
+// ========== 持久化 ==========
+function getKey(){return`ht-2026-${currentMonth}`}
+function saveState(){
+  const data=[];
+  document.querySelectorAll('.cell.checked').forEach(c=>data.push((+c.dataset.day-1)*5+(+c.dataset.habit)));
+  localStorage.setItem(getKey(),JSON.stringify(data));
+}
+function loadState(){
+  try{
+    const raw=localStorage.getItem(getKey());
+    if(!raw)return;
+    JSON.parse(raw).forEach(idx=>{
+      const day=Math.floor(idx/5)+1,habit=idx%5;
+      const cell=document.querySelector(`.cell[data-day="${day}"][data-habit="${habit}"]`);
+      if(cell)cell.classList.add('checked');
+    });
+    refreshAll();
+  }catch(e){}
+}
+
+function toast(msg){
+  const el=document.getElementById('toast');
+  el.textContent=msg;el.classList.add('show');
+  clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove('show'),2000);
+}
+
+// ========== 响应式 ==========
+window.addEventListener('resize',()=>{
+  const wasDesktop=document.querySelector('.desktop-split');
+  const nowDesktop=window.innerWidth>=768;
+  if(wasDesktop!==nowDesktop){renderTable(currentMonth);loadState();refreshAll()}
+});
+
+// ========== 启动 ==========
+renderTable(currentMonth);loadState();refreshAll();
+if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt',e=>{
+  e.preventDefault();deferredPrompt=e;
+  setTimeout(()=>{
+    if(deferredPrompt&&!localStorage.getItem('ht-install-prompted')){
+      toast('💡 点右上角「添加到主屏幕」，像 App 一样使用');
+      localStorage.setItem('ht-install-prompted','1');
+    }
+  },30000);
+});
+</script>
+</body>
+</html>
