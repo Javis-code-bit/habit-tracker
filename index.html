@@ -319,6 +319,7 @@
   <button class="btn-fill ripple" style="opacity:.8" onclick="fillAll()">🏆 整月全勤</button>
   <button class="ripple" onclick="resetMonth()">🔄 重置本月</button>
   <button class="btn-print ripple" onclick="window.print()">🖨️ 打印</button>
+  <button id="soundToggle" onclick="toggleSound()" title="音效开关">🔊</button>
 </div>
 
 <div class="table-container" id="tableContainer"></div>
@@ -405,6 +406,65 @@ function spawnConfetti() {
   }, 3000);
 }
 
+// ========== 音效 ==========
+let audioCtx = null;
+let soundEnabled = localStorage.getItem('ht-sound') !== 'off';
+
+function initAudio() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+}
+
+function playTap() {
+  if (!soundEnabled) return;
+  try {
+    initAudio();
+    const t = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(800, t);
+    osc.frequency.exponentialRampToValueAtTime(400, t + 0.05);
+    gain.gain.setValueAtTime(0.12, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.start(t); osc.stop(t + 0.05);
+  } catch(e) {}
+}
+
+function playChime() {
+  if (!soundEnabled) return;
+  try {
+    initAudio();
+    const t = audioCtx.currentTime;
+    [1200, 1600].forEach((freq, i) => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      const start = t + i * 0.07;
+      osc.frequency.setValueAtTime(freq, start);
+      gain.gain.setValueAtTime(0.15, start);
+      gain.gain.exponentialRampToValueAtTime(0.001, start + 0.08);
+      osc.connect(gain); gain.connect(audioCtx.destination);
+      osc.start(start); osc.stop(start + 0.08);
+    });
+  } catch(e) {}
+}
+
+function toggleSound() {
+  soundEnabled = !soundEnabled;
+  localStorage.setItem('ht-sound', soundEnabled ? 'on' : 'off');
+  document.getElementById('soundToggle').textContent = soundEnabled ? '🔊' : '🔇';
+}
+
+// 初始图标
+document.addEventListener('DOMContentLoaded', () => {
+  const btn = document.getElementById('soundToggle');
+  if (btn) btn.textContent = soundEnabled ? '🔊' : '🔇';
+});
+
 // ========== 涟漪 ==========
 document.addEventListener('click', function(e) {
   const btn = e.target.closest('.ripple');
@@ -479,6 +539,7 @@ function bindClicks(){
   document.querySelectorAll('.cell').forEach(cell=>{
     cell.addEventListener('click',()=>{
       cell.classList.toggle('checked');
+      playTap();
       const day = cell.dataset.day;
       refreshDay(day);
       refreshStats();
@@ -489,6 +550,7 @@ function bindClicks(){
         const rateEl = document.querySelector(`.rate[data-day="${day}"]`);
         if (rateEl) { rateEl.classList.remove('s-rank'); void rateEl.offsetWidth; rateEl.classList.add('s-rank'); }
         spawnConfetti();
+        playChime();
         toast('🏆 S级！完美的一天！');
       }
     });
@@ -592,6 +654,7 @@ window.addEventListener('resize',()=>{
 });
 
 // ========== 启动 ==========
+document.getElementById('soundToggle').textContent = soundEnabled ? '🔊' : '🔇';
 renderTable(currentMonth);loadState();refreshAll();
 if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
 
