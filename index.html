@@ -415,6 +415,14 @@ function ensureAudio() {
   try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
 }
 
+function flashButton() {
+  const btn = document.getElementById('soundToggle');
+  if (!btn) return;
+  btn.style.transform = 'scale(1.3)';
+  btn.style.background = '#4CAF50';
+  setTimeout(() => { btn.style.transform = ''; btn.style.background = ''; }, 150);
+}
+
 function playTap() {
   if (!soundEnabled) return;
   ensureAudio(); if (!audioCtx) return;
@@ -430,6 +438,7 @@ function playTap() {
     gain.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
     osc.connect(gain); gain.connect(audioCtx.destination);
     osc.start(t); osc.stop(t + 0.05);
+    flashButton();
   } catch(e) {}
 }
 
@@ -450,6 +459,7 @@ function playChime() {
       osc.connect(gain); gain.connect(audioCtx.destination);
       osc.start(start); osc.stop(start + 0.08);
     });
+    flashButton();
   } catch(e) {}
 }
 
@@ -484,6 +494,7 @@ function speakHabit(habitIdx) {
       utter(cfg.vol);
       if (cfg.echo) setTimeout(() => utter(cfg.vol * 0.45), 120);
     }, 50);
+    flashButton();
   } catch(e) {}
 }
 
