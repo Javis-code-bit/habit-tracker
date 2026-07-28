@@ -462,31 +462,31 @@ function toggleSound() {
 
 // ========== TTS 语音播报 ==========
 const VOICE_LINES = [
-  { text: '今日运动已达标', lang: 'zh-CN', pitch: 1.3, rate: 1.1, vol: 0.9 },
-  { text: 'Perfect!',           lang: 'en-US', pitch: 1.4, rate: 1.0, vol: 0.9 },
-  { text: '你好，未来的注册会计师', lang: 'zh-CN', pitch: 0.95, rate: 0.9, vol: 0.85, echo: true },
-  { text: '护肤完成，给皮肤加满能量', lang: 'zh-CN', pitch: 1.2, rate: 0.95, vol: 0.85 },
-  { text: 'Smart!',             lang: 'en-US', pitch: 1.5, rate: 0.9, vol: 0.9 },
+  { text: '今日运动已达标', fallback: 'Exercise done!', lang: 'zh-CN', pitch: 1.3, rate: 1.1, vol: 0.9 },
+  { text: 'Perfect!',                             lang: 'en-US', pitch: 1.4, rate: 1.0, vol: 0.9 },
+  { text: '你好，未来的注册会计师', fallback: 'Hello, future CPA!', lang: 'zh-CN', pitch: 0.95, rate: 0.9, vol: 0.85, echo: true },
+  { text: '护肤完成，给皮肤加满能量', fallback: 'Skincare complete!', lang: 'zh-CN', pitch: 1.2, rate: 0.95, vol: 0.85 },
+  { text: 'Smart!',                             lang: 'en-US', pitch: 1.5, rate: 0.9, vol: 0.9 },
 ];
 
 function speakHabit(habitIdx) {
   if (!soundEnabled || !window.speechSynthesis) return;
   try {
     const cfg = VOICE_LINES[habitIdx];
-    window.speechSynthesis.cancel();
-    // 同步调用 speak，确保在用户手势链路中
-    const speak = (vol) => {
-      const u = new SpeechSynthesisUtterance(cfg.text);
-      u.lang = cfg.lang; u.pitch = cfg.pitch; u.rate = cfg.rate; u.volume = vol;
-      u.onerror = () => {}; // 静默吞错（如无中文语音包）
+    const speak = (text, lang, vol) => {
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = lang; u.pitch = cfg.pitch; u.rate = cfg.rate; u.volume = vol;
+      // 中文失败时自动用英文降级
+      if (cfg.fallback && lang === 'zh-CN') {
+        u.onerror = () => speak(cfg.fallback, 'en-US', vol * 0.85);
+      } else {
+        u.onerror = () => {};
+      }
       window.speechSynthesis.speak(u);
       return u;
     };
-    const u = speak(cfg.vol);
-    // CPA 回声：主语音播完后延迟再播一次低音量版本
-    if (cfg.echo) {
-      u.onend = () => setTimeout(() => speak(cfg.vol * 0.45), 80);
-    }
+    const u = speak(cfg.text, cfg.lang, cfg.vol);
+    if (cfg.echo) u.onend = () => setTimeout(() => speak(cfg.text, cfg.lang, cfg.vol * 0.45), 100);
   } catch(e) {}
 }
 
