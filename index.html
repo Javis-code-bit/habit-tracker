@@ -410,19 +410,14 @@ function spawnConfetti() {
 let audioCtx = null;
 let soundEnabled = localStorage.getItem('ht-sound') !== 'off';
 
-// iOS/部分浏览器要求 AudioContext 必须在用户手势中创建
 function ensureAudio() {
   if (audioCtx) return;
-  try {
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  } catch(e) { audioCtx = null; }
+  try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
 }
-// 页面任意位置第一次点击就初始化
-document.addEventListener('click', ensureAudio, { once: true });
-document.addEventListener('touchstart', ensureAudio, { once: true });
 
 function playTap() {
-  if (!soundEnabled || !audioCtx) return;
+  if (!soundEnabled) return;
+  ensureAudio(); if (!audioCtx) return;
   try {
     if (audioCtx.state === 'suspended') audioCtx.resume();
     const t = audioCtx.currentTime;
@@ -431,7 +426,7 @@ function playTap() {
     osc.type = 'sine';
     osc.frequency.setValueAtTime(800, t);
     osc.frequency.exponentialRampToValueAtTime(400, t + 0.05);
-    gain.gain.setValueAtTime(0.12, t);
+    gain.gain.setValueAtTime(0.15, t);
     gain.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
     osc.connect(gain); gain.connect(audioCtx.destination);
     osc.start(t); osc.stop(t + 0.05);
@@ -439,7 +434,8 @@ function playTap() {
 }
 
 function playChime() {
-  if (!soundEnabled || !audioCtx) return;
+  if (!soundEnabled) return;
+  ensureAudio(); if (!audioCtx) return;
   try {
     if (audioCtx.state === 'suspended') audioCtx.resume();
     const t = audioCtx.currentTime;
@@ -449,7 +445,7 @@ function playChime() {
       osc.type = 'sine';
       const start = t + i * 0.07;
       osc.frequency.setValueAtTime(freq, start);
-      gain.gain.setValueAtTime(0.15, start);
+      gain.gain.setValueAtTime(0.12, start);
       gain.gain.exponentialRampToValueAtTime(0.001, start + 0.08);
       osc.connect(gain); gain.connect(audioCtx.destination);
       osc.start(start); osc.stop(start + 0.08);
