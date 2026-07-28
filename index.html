@@ -455,8 +455,34 @@ function playChime() {
 
 function toggleSound() {
   soundEnabled = !soundEnabled;
+  if (!soundEnabled && window.speechSynthesis) window.speechSynthesis.cancel();
   localStorage.setItem('ht-sound', soundEnabled ? 'on' : 'off');
   document.getElementById('soundToggle').textContent = soundEnabled ? '🔊' : '🔇';
+}
+
+// ========== TTS 语音播报 ==========
+const VOICE_LINES = [
+  { text: '今日运动已达标', lang: 'zh-CN', pitch: 1.3, rate: 1.1, vol: 0.9 },
+  { text: 'Perfect!',           lang: 'en-US', pitch: 1.4, rate: 1.0, vol: 0.9 },
+  { text: '你好，未来的注册会计师', lang: 'zh-CN', pitch: 0.95, rate: 0.9, vol: 0.85, echo: true },
+  { text: '护肤完成，给皮肤加满能量', lang: 'zh-CN', pitch: 1.2, rate: 0.95, vol: 0.85 },
+  { text: 'Smart!',             lang: 'en-US', pitch: 1.5, rate: 0.9, vol: 0.9 },
+];
+
+function speakHabit(habitIdx) {
+  if (!soundEnabled || !window.speechSynthesis) return;
+  try {
+    const cfg = VOICE_LINES[habitIdx];
+    window.speechSynthesis.cancel(); // 打断上一个
+    const utter = (vol) => {
+      const u = new SpeechSynthesisUtterance(cfg.text);
+      u.lang = cfg.lang; u.pitch = cfg.pitch; u.rate = cfg.rate; u.volume = vol;
+      window.speechSynthesis.speak(u);
+    };
+    utter(cfg.vol);
+    // CPA 回声效果：延迟 120ms 再播一次，音量减半
+    if (cfg.echo) setTimeout(() => utter(cfg.vol * 0.45), 120);
+  } catch(e) {}
 }
 
 // 初始图标
@@ -538,9 +564,14 @@ function buildFull(data,todayStr){
 function bindClicks(){
   document.querySelectorAll('.cell').forEach(cell=>{
     cell.addEventListener('click',()=>{
+      const wasChecked = cell.classList.contains('checked');
       cell.classList.toggle('checked');
       playTap();
       const day = cell.dataset.day;
+      // 打勾时触发语音播报
+      if (!wasChecked && cell.classList.contains('checked')) {
+        speakHabit(parseInt(cell.dataset.habit));
+      }
       refreshDay(day);
       refreshStats();
       saveState();
